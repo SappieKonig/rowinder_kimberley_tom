@@ -1,3 +1,9 @@
+# qua opbouw heel overzichtelijk en erg prettig om naar te kijken.
+# env.reset() is dubbelop maar daar ga je geen last van hebben
+
+
+
+
 import gym
 env =gym.make("CartPole-v0")
 #for x in range(10):
