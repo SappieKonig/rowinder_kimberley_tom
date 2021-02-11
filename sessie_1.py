@@ -1,4 +1,5 @@
 #regel 86 tm 91 een keer sterk verbeteren
+#heb er volgens mij geen random shit inzitten om een epsilon na te jagen
 
 
 import numpy as np
