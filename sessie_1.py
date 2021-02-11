@@ -3,8 +3,7 @@ import gym
 import tensorflow as tf
 
 env =gym.make("CartPole-v0")
-#for x in range(10):
-env.reset()
+
 done= False #gebruik ik lekker niet
 
 def decay(rewards, decay_factor):
@@ -62,16 +61,30 @@ reward_total = []
 is_done_total = []
 info_total = []
 
+observation = tf.keras.layers.Input(4)
+X = tf.keras.layers.Dense(12, "relu")(observation)
+X = tf.keras.layers.Dense(48, "relu")(X)
+X = tf.keras.layers.Dense(48, "relu")(X)
+output = tf.keras.layers.Dense(1, "sigmoid")(X)
+
+model = tf.keras.models.Model(inputs=[observation], outputs=[output])
+model.compile(loss='mse', optimizer='adam')
+
+
 for run in range(3):
-    env.reset()
     #variabele totalen per spel
     observations = []
     rewards = []
     is_dones = []
     infos = []
+    observation = env.reset()
+    observation.reshape(1, 4)
 
     while 1:
-        observation, reward, is_done, info= env.step(0)
+        predicted_waarde=model.predict(observation.reshape(1, 4))[0][0]
+        print(predicted_waarde)
+        predicted_waarde_action=np.random.choice(np.arange(2), p=predicted_waarde)
+        observation, reward, is_done, info= env.step(predicted_waarde_action)
         #env.render()
         #voeg uit env gekomen waarde toe aan list van dit spel
         observations.append(observation)
@@ -99,6 +112,5 @@ print(decay_loose(reward_total,.9))
 print()
 print('genormaliseerde decayed waardes')
 print(decay_and_normalize(reward_total,.9))
-
 
 
