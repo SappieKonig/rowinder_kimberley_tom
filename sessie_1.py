@@ -1,3 +1,6 @@
+#regel 86 tm 91 een keer sterk verbeteren
+
+
 import numpy as np
 import gym
 import tensorflow as tf
@@ -65,7 +68,7 @@ observation = tf.keras.layers.Input(4)
 X = tf.keras.layers.Dense(12, "relu")(observation)
 X = tf.keras.layers.Dense(48, "relu")(X)
 X = tf.keras.layers.Dense(48, "relu")(X)
-output = tf.keras.layers.Dense(1, "sigmoid")(X)
+output = tf.keras.layers.Dense(2, "sigmoid")(X)
 
 model = tf.keras.models.Model(inputs=[observation], outputs=[output])
 model.compile(loss='mse', optimizer='adam')
@@ -81,9 +84,13 @@ for run in range(3):
     observation.reshape(1, 4)
 
     while 1:
-        predicted_waarde=model.predict(observation.reshape(1, 4))[0][0]
+        predicted_waarde=model.predict(observation.reshape(1, 4))
+        predicted_waarde_val=predicted_waarde[0][0]
         print(predicted_waarde)
-        predicted_waarde_action=np.random.choice(np.arange(2), p=predicted_waarde)
+        predicted_waarde_action=np.argmax(predicted_waarde)
+        predicted_waarde_action2 = np.argmax(predicted_waarde_val)
+        print(predicted_waarde_action)
+        print(predicted_waarde_action2)
         observation, reward, is_done, info= env.step(predicted_waarde_action)
         #env.render()
         #voeg uit env gekomen waarde toe aan list van dit spel
