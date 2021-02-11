@@ -5,7 +5,7 @@
 
 
 import gym
-env =gym.make("CartPole-v0")
+env = gym.make("CartPole-v0")
 #for x in range(10):
 # env.reset()
 done= False
