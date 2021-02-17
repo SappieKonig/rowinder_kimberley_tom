@@ -1,7 +1,8 @@
 #regel 86 tm 91 een keer sterk verbeteren
 #heb er volgens mij geen random shit inzitten om een epsilon na te jagen
 
-
+# regel 102 klopt niet helemaal (infos.append(infos)). infos boeit gelukkig niet ;) Het is nog een beetje een rotzooitje maar het klopt allemaal wel
+# jullie eigen commentaar zegt eigenlijk alles al
 import numpy as np
 import gym
 import tensorflow as tf
