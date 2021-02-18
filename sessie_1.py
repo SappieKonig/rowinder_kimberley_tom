@@ -6,6 +6,7 @@
 import numpy as np
 import gym
 import tensorflow as tf
+import random
 
 env =gym.make("CartPole-v0")
 
@@ -65,12 +66,14 @@ observation_total = []
 reward_total = []
 is_done_total = []
 info_total = []
+step_values_total = []
 
 observation = tf.keras.layers.Input(4)
 X = tf.keras.layers.Dense(12, "relu")(observation)
 X = tf.keras.layers.Dense(48, "relu")(X)
 X = tf.keras.layers.Dense(48, "relu")(X)
-output = tf.keras.layers.Dense(2, "sigmoid")(X)
+output = tf.keras.layers.Dense(1, "sigmoid")(X)
+
 
 model = tf.keras.models.Model(inputs=[observation], outputs=[output])
 model.compile(loss='mse', optimizer='adam')
@@ -82,32 +85,30 @@ for run in range(3):
     rewards = []
     is_dones = []
     infos = []
+    step_values = []
     observation = env.reset()
     observation.reshape(1, 4)
 
     while 1:
-        predicted_waarde=model.predict(observation.reshape(1, 4))
-        predicted_waarde_val=predicted_waarde[0][0]
-        print(predicted_waarde)
-        predicted_waarde_action=np.argmax(predicted_waarde)
-        predicted_waarde_action2 = np.argmax(predicted_waarde_val)
+        predicted_waarde = model.predict(observation.reshape((1, -1)))[0][0]
+        # predicted_waarde_action=np.round(predicted_waarde).astype(int)
+        predicted_waarde_action = 0 if random.random() > predicted_waarde else 1
         print(predicted_waarde_action)
-        print(predicted_waarde_action2)
-        observation, reward, is_done, info= env.step(predicted_waarde_action)
-        #env.render()
-        #voeg uit env gekomen waarde toe aan list van dit spel
+        observation, reward, is_done, info = env.step(predicted_waarde_action)
+        # env.render()
+        # voeg uit env gekomen waarde toe aan list van dit spel
         observations.append(observation)
         rewards.append(reward)
         is_dones.append(is_done)
         infos.append(info)
-        if len(is_dones) >500: #anders stop je niet als het ooit perfect is? xD
-            is_done=True
+        step_values.append(predicted_waarde_action)
 
         if is_done:
             observation_total.append(observations)
             reward_total.append(rewards)
             is_done_total.append(is_dones)
             infos.append(infos)
+            step_values_total.append(step_values)
             break
     #print(run)
 
@@ -122,4 +123,7 @@ print()
 print('genormaliseerde decayed waardes')
 print(decay_and_normalize(reward_total,.9))
 
+print('step_values_total')
+for a in step_values_total:
+    print(a)
 
