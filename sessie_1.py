@@ -67,6 +67,8 @@ reward_total = []
 is_done_total = []
 info_total = []
 step_values_total = []
+actions_total=[]
+predicted_values_before_random_total=[]
 
 observation = tf.keras.layers.Input(4)
 X = tf.keras.layers.Dense(12, "relu")(observation)
@@ -86,6 +88,7 @@ for run in range(3):
     is_dones = []
     infos = []
     step_values = []
+    predicted_values_before_random=[]
     observation = env.reset()
     observation.reshape(1, 4)
 
@@ -93,7 +96,7 @@ for run in range(3):
         predicted_waarde = model.predict(observation.reshape((1, -1)))[0][0]
         # predicted_waarde_action=np.round(predicted_waarde).astype(int)
         predicted_waarde_action = 0 if random.random() > predicted_waarde else 1
-        print(predicted_waarde_action)
+        #print(predicted_waarde_action)
         observation, reward, is_done, info = env.step(predicted_waarde_action)
         # env.render()
         # voeg uit env gekomen waarde toe aan list van dit spel
@@ -102,13 +105,15 @@ for run in range(3):
         is_dones.append(is_done)
         infos.append(info)
         step_values.append(predicted_waarde_action)
+        predicted_values_before_random.append(predicted_waarde)
 
         if is_done:
             observation_total.append(observations)
             reward_total.append(rewards)
             is_done_total.append(is_dones)
             infos.append(infos)
-            step_values_total.append(step_values)
+            actions_total.append(step_values)
+            predicted_values_before_random_total.append(predicted_values_before_random)
             break
     #print(run)
 
@@ -121,9 +126,26 @@ print('decayed waardes')
 print(decay_loose(reward_total,.9))
 print()
 print('genormaliseerde decayed waardes')
-print(decay_and_normalize(reward_total,.9))
+decay_and_normalized_rewards=decay_and_normalize(reward_total,.9)
+print(decay_and_normalized_rewards)
 
-print('step_values_total')
-for a in step_values_total:
+print('actions_total - genomen stappen')
+for a in actions_total:
     print(a)
 
+print('observation_total')
+for b in observation_total:
+    print(b)
+
+#zet format arrays om
+observations_reshaped=np.concatenate(observation_total)
+actions_reshaped=np.concatenate(actions_total)
+predicted_values_reshaped=np.concatenate(predicted_values_before_random_total)
+
+for lengte_obs in range(len(observations_reshaped)):
+    print() #witregel
+    print('(zero based) observation: ' + str(lengte_obs))  # witregel
+    print(observations_reshaped[lengte_obs]) #obs
+    print(actions_reshaped[lengte_obs]) #genomen stappen
+    print(predicted_values_reshaped[lengte_obs]) #input voor rolled values
+    print(decay_and_normalized_rewards) #rewards decayed and normalized
