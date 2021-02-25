@@ -64,16 +64,17 @@ def decay_and_normalize(total_rewards, decay_factor):
 
 
 observation = tf.keras.layers.Input(4)
-X = tf.keras.layers.Dense(12, "relu")(observation)
-#X = tf.keras.layers.Dense(48, "relu")(X)
+X = tf.keras.layers.Dense(48, "relu")(observation)
+X = tf.keras.layers.Dense(48, "relu")(X)
 #X = tf.keras.layers.Dense(48, "relu")(X)
 output = tf.keras.layers.Dense(1, "sigmoid")(X)
 
 
 model = tf.keras.models.Model(inputs=[observation], outputs=[output])
 #model.compile(loss='mse', optimizer='adam')
+optimizer = tf.keras.optimizers.Adam(3e-4)
 
-for epoch in range(1000):
+for epoch in range(50):
 
     #totaal over variabelen heen
     observation_total = []
@@ -85,14 +86,20 @@ for epoch in range(1000):
     predicted_values_before_random_total=[]
 
 
-    for run in range(25):
+    for run in range(80):
         #variabele totalen per spel
         observations = []
         rewards = []
         is_dones = []
         infos = []
         step_values = []
+
+        #step_values.append(0)
+
         predicted_values_before_random=[]
+
+        #predicted_values_before_random.append(0)
+
         observation = env.reset()
         observation.reshape(1, 4)
         reward=[1]
@@ -118,6 +125,11 @@ for epoch in range(1000):
             predicted_values_before_random.append(predicted_waarde)
 
             if is_done:
+                #observations.append(observation)
+                #rewards.append(reward)
+                #is_dones.append(is_done)
+                #infos.append(info)
+
                 observation_total.append(observations)
                 reward_total.append(rewards)
                 is_done_total.append(is_dones)
@@ -133,14 +145,14 @@ for epoch in range(1000):
     print(is_done_total) #testen of het klopt dat we ook een reward=1 krijgen indien we is_done zijn >.> klopt, code erboven is niet gek
     print()
     print('decayed waardes')
-    print(decay_loose(reward_total,.9))
+    print(decay_loose(reward_total,.97))
     print()
     print('genormaliseerde decayed waardes')
     '''
-    decay_and_normalized_rewards=decay_and_normalize(reward_total,.9)
+    decay_and_normalized_rewards=decay_and_normalize(reward_total,.97)
     #print(decay_and_normalized_rewards)
 
-    print('actions_total - genomen stappen')
+    #print('actions_total - genomen stappen')
     #for a in actions_total:
     #    print(a)
     #print()
@@ -166,10 +178,14 @@ for epoch in range(1000):
         print(predicted_values_reshaped[lengte_obs]) #input voor rolled values
         print(decay_and_normalized_rewards[lengte_obs]) #rewards decayed and normalized
         print(reward_reshaped[lengte_obs]) #rewards decayed niet normalized
-    '''
-    optimizer = tf.keras.optimizers.Adam(3e-4)
+        '''
+
     with tf.GradientTape() as tape:
         predictions = model(observations_reshaped)
+        predictions = tf.keras.backend.clip(predictions, 1e-7, 1 - 1e-7)
+        #print(actions_reshaped.shape())
+        #print(predictions.shape())
+        #loss = tf.keras.losses.categorical_crossentropy(actions_reshaped, predictions) * decay_and_normalized_rewards
         loss = tf.keras.losses.mse(actions_reshaped, predictions)*decay_and_normalized_rewards
         print()
         #print(loss)
