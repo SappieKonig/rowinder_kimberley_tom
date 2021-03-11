@@ -12,6 +12,8 @@ env =gym.make("CartPole-v0")
 
 done= False #gebruik ik lekker niet
 
+loss_total=[]
+
 def decay(rewards, decay_factor):
     """
     Berekent de echte rewards aan de hand van de verkregen rewards van een episode op elk tijdstip en een decay_factor
@@ -61,20 +63,41 @@ def decay_and_normalize(total_rewards, decay_factor):
 
     return (total_rewards - np.mean(total_rewards)) / np.std(total_rewards)
 
+def decay_min_valuehead_normalized(total_rewards, value_head, decay_factor):
+    """
+    Past decay toe op een batch van episodes en normaliseert over het geheel
+    Berekent per waarde distance SD van mean
 
+    :param total_rewards: list van lists/arrays, waar de inner lists rewards bevatten
+    :param decay_factor: getal tussen 0 en 1 dat het belang van de toekomst aangeeft
+    :return: één nieuwe array met nieuwe rewards waar de toekomst in mee is genomen en die genormaliseerd is
+
+    VB: decay_and_normalize([[0, 1], [1, 1, 1]], .9)
+        eerst decay --> [[.9, 1], [2.71, 1.9, 1]]
+        dan normaliseren --> [-0.85, -0.71, 1.71, 0.56, -0.71]
+    """
+    total_rewards_2 = [a - b for a, b in zip(total_rewards, value_head)]
+
+    for i, rewards in enumerate(total_rewards_2):
+        total_rewards[i] = decay(rewards, decay_factor)
+
+
+    total_rewards = np.concatenate(total_rewards)
+
+    return (total_rewards - np.mean(total_rewards)) / np.std(total_rewards)
 
 observation = tf.keras.layers.Input(4)
 X = tf.keras.layers.Dense(48, "relu")(observation)
 X = tf.keras.layers.Dense(48, "relu")(X)
 #X = tf.keras.layers.Dense(48, "relu")(X)
 output = tf.keras.layers.Dense(1, "sigmoid")(X)
+output_2=tf.keras.layers.Dense(1)(X)
 
-
-model = tf.keras.models.Model(inputs=[observation], outputs=[output])
+model = tf.keras.models.Model(inputs=[observation], outputs=[output,output_2])
 #model.compile(loss='mse', optimizer='adam')
-optimizer = tf.keras.optimizers.Adam(3e-4)
+optimizer = tf.keras.optimizers.Adam(3e-3)
 
-for epoch in range(50):
+for epoch in range(2):
 
     #totaal over variabelen heen
     observation_total = []
@@ -84,9 +107,10 @@ for epoch in range(50):
     step_values_total = []
     actions_total=[]
     predicted_values_before_random_total=[]
+    value_head=[]
 
 
-    for run in range(80):
+    for run in range(2):
         #variabele totalen per spel
         observations = []
         rewards = []
@@ -97,6 +121,7 @@ for epoch in range(50):
         #step_values.append(0)
 
         predicted_values_before_random=[]
+        pre_value_head=[]
 
         #predicted_values_before_random.append(0)
 
@@ -114,6 +139,8 @@ for epoch in range(50):
             infos.append(info)
 
             predicted_waarde = model.predict(observation.reshape((1, -1)))[0][0]
+            predicted_waarde_2 = model.predict(observation.reshape((1, -1)))[1][0]
+            print(predicted_waarde,predicted_waarde_2)
             # predicted_waarde_action=np.round(predicted_waarde).astype(int)
             predicted_waarde_action = 0 if random.random() > predicted_waarde else 1
             #print(predicted_waarde_action)
@@ -123,6 +150,7 @@ for epoch in range(50):
 
             step_values.append(predicted_waarde_action)
             predicted_values_before_random.append(predicted_waarde)
+            pre_value_head.append(predicted_waarde_2)
 
             if is_done:
                 #observations.append(observation)
@@ -136,6 +164,8 @@ for epoch in range(50):
                 infos.append(infos)
                 actions_total.append(step_values)
                 predicted_values_before_random_total.append(predicted_values_before_random)
+                value_head.append(pre_value_head)
+
                 break
         #print(run)
     '''
@@ -149,7 +179,9 @@ for epoch in range(50):
     print()
     print('genormaliseerde decayed waardes')
     '''
+    new_decayed_reward = decay_min_valuehead_normalized(reward_total, value_head, .97)
     decay_and_normalized_rewards=decay_and_normalize(reward_total,.97)
+
     #print(decay_and_normalized_rewards)
 
     #print('actions_total - genomen stappen')
@@ -189,7 +221,10 @@ for epoch in range(50):
         loss = tf.keras.losses.mse(actions_reshaped, predictions)*decay_and_normalized_rewards
         print()
         #print(loss)
+        loss_total.append(loss.shape)
         print(loss.shape)
     train_vars = model.trainable_variables
     grads = tape.gradient(loss, train_vars)
     optimizer.apply_gradients(zip(grads, train_vars))
+
+    #new_decayed_reward=decayed_reward
