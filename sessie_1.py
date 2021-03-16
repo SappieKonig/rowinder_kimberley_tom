@@ -76,14 +76,11 @@ def decay_min_valuehead_normalized(total_rewards, value_head, decay_factor):
         eerst decay --> [[.9, 1], [2.71, 1.9, 1]]
         dan normaliseren --> [-0.85, -0.71, 1.71, 0.56, -0.71]
     """
-    total_rewards_2 = [a - b for a, b in zip(total_rewards, value_head)]
-
-    for i, rewards in enumerate(total_rewards_2):
+    for i, rewards in enumerate(total_rewards):
         total_rewards[i] = decay(rewards, decay_factor)
 
 
-    total_rewards = np.concatenate(total_rewards)
-
+    total_rewards = np.concatenate(total_rewards) - np.concatenate(value_head) #aangepast doordat reward op regel 128 nu anders wordt weggeschreven gaat dit niet meer fout
     return (total_rewards - np.mean(total_rewards)) / np.std(total_rewards)
 
 observation = tf.keras.layers.Input(4)
@@ -97,7 +94,7 @@ model = tf.keras.models.Model(inputs=[observation], outputs=[output,output_2])
 #model.compile(loss='mse', optimizer='adam')
 optimizer = tf.keras.optimizers.Adam(3e-3)
 
-for epoch in range(2):
+for epoch in range(5):
 
     #totaal over variabelen heen
     observation_total = []
@@ -110,7 +107,7 @@ for epoch in range(2):
     value_head=[]
 
 
-    for run in range(2):
+    for run in range(50):
         #variabele totalen per spel
         observations = []
         rewards = []
@@ -127,7 +124,7 @@ for epoch in range(2):
 
         observation = env.reset()
         observation.reshape(1, 4)
-        reward=[1]
+        reward=1 #aangepast, was eerst een [1]
         is_done=False
         info=[]
 
@@ -135,12 +132,13 @@ for epoch in range(2):
             #nader te bepalen comment
             observations.append(observation)
             rewards.append(reward)
+            #print("reward", reward)
             is_dones.append(is_done)
             infos.append(info)
 
-            predicted_waarde = model.predict(observation.reshape((1, -1)))[0][0]
-            predicted_waarde_2 = model.predict(observation.reshape((1, -1)))[1][0]
-            print(predicted_waarde,predicted_waarde_2)
+            predicted_waarde = model.predict(observation.reshape((1, -1)))[0][0] #output
+            predicted_waarde_2 = model.predict(observation.reshape((1, -1)))[1][0] #output_2
+            #print(predicted_waarde,predicted_waarde_2)
             # predicted_waarde_action=np.round(predicted_waarde).astype(int)
             predicted_waarde_action = 0 if random.random() > predicted_waarde else 1
             #print(predicted_waarde_action)
@@ -179,7 +177,10 @@ for epoch in range(2):
     print()
     print('genormaliseerde decayed waardes')
     '''
+
+    #print("new_decayed_reward")
     new_decayed_reward = decay_min_valuehead_normalized(reward_total, value_head, .97)
+    #print("decay_and_normalized_rewards")
     decay_and_normalized_rewards=decay_and_normalize(reward_total,.97)
 
     #print(decay_and_normalized_rewards)
@@ -213,12 +214,13 @@ for epoch in range(2):
         '''
 
     with tf.GradientTape() as tape:
-        predictions = model(observations_reshaped)
-        predictions = tf.keras.backend.clip(predictions, 1e-7, 1 - 1e-7)
+        predictions,value_head_output = model(observations_reshaped) #aangepast, daar de value_head_output vandaan halen? we maakten eerst 1 waarde, nu 2 doordat we 2 outputs gedefineerd hebben
+        #predictions = tf.keras.backend.clip(predictions, 1e-7, 1 - 1e-7) #was niet nodig
         #print(actions_reshaped.shape())
         #print(predictions.shape())
         #loss = tf.keras.losses.categorical_crossentropy(actions_reshaped, predictions) * decay_and_normalized_rewards
         loss = tf.keras.losses.mse(actions_reshaped, predictions)*decay_and_normalized_rewards
+        loss += tf.keras.losses.mse(decay_and_normalized_rewards, value_head_output) #aangepast, was voorgezegd in opdracht 5.3
         print()
         #print(loss)
         loss_total.append(loss.shape)
